@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Pilot — Guided Decision Companion</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Selection colors for maximum contrast */
+        .dark ::selection { background: #34d399; color: #0f172a; }
+        ::selection { background: #10b981; color: #ffffff; }
+        
+        /* Smooth custom scrollbars */
+        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .dark .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* No scrollbar utility */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-200">
+
+    <!-- COMPACT TOP CONTROL BAR -->
+    <header class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3 shrink-0 shadow-sm space-y-3">
+        <!-- Top Row: Logo, Theme, Language Switcher, Demo and Reset Buttons -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+                <div id="status-pulse" class="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-600 transition-colors duration-500"></div>
+                <span data-i18n="statusLabel" class="font-mono text-[11px] tracking-wider text-zinc-500 dark:text-zinc-400 uppercase font-bold">Meeting Pilot</span>
+            </div>
+            
+            <div class="flex items-center space-x-2.5">
+                <!-- Language Switcher -->
+                <div class="flex items-center space-x-1 font-mono text-[10px] bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded border border-zinc-200/50 dark:border-zinc-700">
+                    <button id="lang-btn-en" class="px-1.5 py-0.5 rounded transition-colors text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 font-bold">EN</button>
+                    <span class="text-zinc-300 dark:text-zinc-700">|</span>
+                    <button id="lang-btn-hu" class="px-1.5 py-0.5 rounded transition-colors text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">HU</button>
+                </div>
+                <span class="text-zinc-300 dark:text-zinc-700 font-light">|</span>
+                <!-- Theme Button -->
+                <button id="theme-toggle" class="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 transition-colors" title="Toggle Theme">
+                    <i data-lucide="sun" class="w-4 h-4 dark:hidden"></i>
+                    <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+                </button>
+                <span class="text-zinc-300 dark:text-zinc-700 font-light">|</span>
+                <button id="system-demo" class="text-[10px] font-mono text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors flex items-center gap-1">
+                    <i data-lucide="sparkles" class="w-3 h-3"></i> <span data-i18n="demoBtn">Load Demo</span>
+                </button>
+                <button id="system-reset" class="text-[10px] font-mono text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> <span data-i18n="resetBtn">Reset</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Middle Row: Compact Step Progress Indicator -->
+        <nav class="flex items-center justify-between gap-1 bg-zinc-100/70 dark:bg-zinc-950/40 p-1 rounded-lg border border-zinc-200/50 dark:border-zinc-850 overflow-x-auto no-scrollbar">
+            <button id="step-nav-1" data-i18n="step1" class="flex-1 min-w-[70px] text-center py-1 rounded text-[10px] font-mono transition-all">1. kickoff</button>
+            <button id="step-nav-2" data-i18n="step2" class="flex-1 min-w-[120px] text-center py-1 rounded text-[10px] font-mono transition-all">2. past tasks</button>
+            <button id="step-nav-3" data-i18n="step3" class="flex-1 min-w-[120px] text-center py-1 rounded text-[10px] font-mono transition-all">3. agenda planner</button>
+            <button id="step-nav-4" data-i18n="step4" class="flex-1 min-w-[70px] text-center py-1 rounded text-[10px] font-mono transition-all">4. helper</button>
+            <button id="step-nav-5" data-i18n="step5" class="flex-1 min-w-[90px] text-center py-1 rounded text-[10px] font-mono transition-all">5. tasks</button>
+            <button id="step-nav-6" data-i18n="step6" class="flex-1 min-w-[80px] text-center py-1 rounded text-[10px] font-mono transition-all">6. audit & export</button>
+        </nav>
+
+        <!-- Bottom Row: Symmetrical Goal Display & Timer -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1 items-center">
+            <!-- Goal -->
+            <div class="md:col-span-8 flex items-center space-x-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-850 px-2.5 py-1 rounded">
+                <span data-i18n="goalLabel" class="text-[9px] font-mono uppercase text-zinc-400 tracking-wider shrink-0">Main question:</span>
+                <span id="active-goal-box" class="text-xs font-medium text-zinc-600 dark:text-zinc-300 truncate font-mono">No goal specified.</span>
+            </div>
+            <!-- Timer & Resource burn -->
+            <div class="md:col-span-4 flex items-center justify-between md:justify-end gap-3">
+                <div class="flex items-baseline space-x-1.5 font-mono text-right">
+                    <span id="timer-text" class="text-lg font-bold tracking-tight text-zinc-700 dark:text-zinc-300">00:00</span>
+                    <span id="burn-text" class="text-[9px] text-zinc-400">0.0h burned</span>
+                </div>
+                <div class="flex gap-1">
+                    <button id="timer-toggle-btn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded text-[10px] font-mono font-semibold transition-colors flex items-center gap-1">
+                        <i data-lucide="play" class="w-3 h-3" id="timer-btn-icon"></i> <span id="timer-btn-text" data-i18n="timerStart">Start</span>
+                    </button>
+                    <button id="timer-reset-btn" class="p-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded transition-colors">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Progress bar for timer -->
+        <div class="w-full bg-zinc-200 dark:bg-zinc-800 h-0.5 rounded-full overflow-hidden">
+            <div id="timer-progress" class="bg-zinc-400 dark:bg-zinc-500 h-full w-0 transition-all duration-1000"></div>
+        </div>
+    </header>
+
+    <!-- MAIN WORK AREA -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- SIDEBAR UTILITY PANEL (Devil's advocate participant tester) -->
+        <aside class="w-full md:w-[260px] border-b md:border-b-0 md:border-r border-zinc-200 dark:border-zinc-800 bg-zinc-100/30 dark:bg-zinc-900/10 p-4 shrink-0 overflow-y-auto custom-scroll space-y-4">
+            <div class="space-y-2 p-3 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <h3 data-i18n="randomChooserTitle" class="text-xs font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5">
+                    <i data-lucide="shuffle" class="w-3.5 h-3.5"></i> Devil's Advocate Chooser
+                </h3>
+                <p data-i18n="randomChooserDesc" class="text-[10px] text-zinc-500 leading-relaxed">Instantly pick a participant and a provocative question to test consensus and combat artificial harmony.</p>
+                
+                <div class="pt-1.5 space-y-2">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-[11px] text-zinc-600 dark:text-zinc-300">
+                        <input type="checkbox" id="chooser-pair-question" checked class="rounded border-zinc-300 text-purple-600 focus:ring-0">
+                        <span data-i18n="pairWithQuestion">Pair with a question</span>
+                    </label>
+                    <button id="chooser-spin-btn" class="w-full py-1.5 bg-purple-600 hover:bg-purple-500 text-white dark:text-white rounded text-[10px] font-mono uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1">
+                        <i data-lucide="dice-5" class="w-3.5 h-3.5"></i> <span data-i18n="spinBtn">Pick Candidate</span>
+                    </button>
+                </div>
+
+                <div id="chooser-result" class="hidden mt-2 p-2.5 bg-purple-500/5 border border-purple-500/10 rounded-md space-y-1.5">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-bold" id="chooser-result-name">Target:</div>
+                    <div class="text-xs text-zinc-700 dark:text-zinc-300 italic leading-relaxed" id="chooser-result-question">Prompts...</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Guided step work containers -->
+        <section class="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-950 overflow-hidden relative">
+            
+            <!-- Dynamic step contents -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 custom-scroll" id="step-content-container">
+                
+                <!-- STEP 1: KICKOFF -->
+                <div id="step-panel-1" class="step-panel space-y-5 max-w-3xl mx-auto">
+                    <div class="space-y-0.5">
+                        <h2 data-i18n="step1Title" class="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Step 1: Kickoff</h2>
+                        <p data-i18n="step1Desc" class="text-xs text-zinc-500 dark:text-zinc-400">Set the boundaries, define the main topic, and optionally import any actions left over from the last meeting.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <div class="space-y-1">
+                            <label data-i18n="meetingNameLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Meeting Name</label>
+                            <input type="text" id="input-title" data-i18n-placeholder="meetingNamePlaceholder" placeholder="e.g., Weekly Tactical Sync..." class="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 dark:focus:border-zinc-400 transition-colors">
+                        </div>
+                        <div class="space-y-1">
+                            <label data-i18n="attendeesCountLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Number of Attendees</label>
+                            <input type="number" id="input-attendees" min="1" max="100" class="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 dark:focus:border-zinc-400 transition-colors">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label data-i18n="goalLabelLong" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">The meeting's single main question (Goal)</label>
+                        <textarea id="input-goal" data-i18n-placeholder="goalPlaceholder" rows="2" placeholder="What is the single question or problem we must answer by the end of today?" class="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 dark:focus:border-zinc-400 transition-colors resize-none leading-relaxed"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <div class="space-y-1">
+                            <label data-i18n="targetDurationLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Target Duration (minutes)</label>
+                            <input type="number" id="input-duration" min="5" max="180" class="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 dark:focus:border-zinc-400 transition-colors">
+                        </div>
+                        <div class="space-y-1">
+                            <label data-i18n="attendeeNamesLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Attendee Names (optional)</label>
+                            <input type="text" id="input-names" data-i18n-placeholder="attendeeNamesPlaceholder" placeholder="Comma separated..." class="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 dark:focus:border-zinc-400 transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- OPTIONAL IMPORT CONSOLE -->
+                    <div class="p-3.5 bg-zinc-100/50 dark:bg-zinc-900/40 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-2">
+                        <h3 data-i18n="importTasksTitle" class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                            <i data-lucide="import" class="w-4 h-4"></i> Import Past Tasks (optional)
+                        </h3>
+                        <p data-i18n="importTasksDesc" class="text-[10px] text-zinc-500">Paste the action plan or tasks from your last meeting. The system flexibly detects dates (e.g. 06.15, 2026.06.15 or in parentheses).</p>
+                        <textarea id="import-notes-area" data-i18n-placeholder="importTasksPlaceholder" rows="3" placeholder="Example:\n| Anna Kovacs | Facebook campaign | 06.15. |\nOr: Anna Kovacs: Facebook campaign (Deadline: 2026.06.15)" class="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1.5 text-xs outline-none focus:border-zinc-500 font-mono"></textarea>
+                        <button id="trigger-import-btn" class="px-3 py-1.5 bg-zinc-800 dark:bg-zinc-200 hover:opacity-90 text-white dark:text-zinc-900 text-[10px] font-mono font-semibold rounded transition-opacity flex items-center gap-1">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i> <span data-i18n="importProcessBtn">Process and Load</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: PAST TASKS AUDIT -->
+                <div id="step-panel-2" class="step-panel space-y-5 max-w-3xl mx-auto hidden">
+                    <div class="space-y-0.5">
+                        <h2 data-i18n="step2Title" class="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Step 2: Review past tasks</h2>
+                        <p data-i18n="step2Desc" class="text-xs text-zinc-500 dark:text-zinc-400">Check off the past tasks that have been successfully **completed**. Unchecked tasks (in progress) will automatically move to today's task list.</p>
+                    </div>
+
+                    <div class="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-zinc-100 dark:bg-zinc-900/60 font-mono text-[10px] text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
+                                <tr>
+                                    <th data-i18n="tblDone" class="px-4 py-2.5 w-16 text-center font-bold">Done?</th>
+                                    <th data-i18n="tblAssignee" class="px-4 py-2.5 font-bold">Assignee & Task Description</th>
+                                    <th data-i18n="tblDeadline" class="px-4 py-2.5 text-center w-28 font-bold">Deadline</th>
+                                    <th data-i18n="tblStatus" class="px-4 py-2.5 text-right w-16 font-bold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="imported-audit-list" class="divide-y divide-zinc-100 dark:divide-zinc-850 font-mono text-xs">
+                                <!-- Dynamic audit content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- STEP 3: AGENDA PLANNER -->
+                <div id="step-panel-3" class="step-panel space-y-5 max-w-3xl mx-auto hidden">
+                    <div class="space-y-0.5">
+                        <h2 data-i18n="step3Title" class="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Step 3: Agenda items and ideas</h2>
+                        <p data-i18n="step3Desc" class="text-xs text-zinc-500 dark:text-zinc-400">Record today's main topics and emerging ideas. These items populate your structured meeting flow.</p>
+                    </div>
+
+                    <!-- Template Selector Row -->
+                    <div class="p-3.5 bg-zinc-100/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="space-y-1">
+                            <label data-i18n="agendaTemplatesLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">Meeting Structure Templates</label>
+                            <span data-i18n="agendaTemplatesDesc" class="text-[10px] text-zinc-500 block">Pre-populate agenda based on tested collaboration frameworks.</span>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <select id="agenda-template-select" class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs rounded px-2 py-1.5 outline-none focus:border-zinc-500 font-mono text-xs">
+                                <option value="tactical" data-i18n="tmplTactical">Weekly Tactical Sync</option>
+                                <option value="brainstorm" data-i18n="tmplBrainstorm">Structured Brainstorming</option>
+                                <option value="retro" data-i18n="tmplRetro">Sprint Retrospective</option>
+                                <option value="kickoff" data-i18n="tmplKickoff">Project Kickoff</option>
+                            </select>
+                            <button id="agenda-template-btn" data-i18n="tmplLoadBtn" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-semibold rounded shrink-0">Load Template</button>
+                        </div>
+                    </div>
+
+                    <!-- Input box -->
+                    <div class="flex gap-2">
+                        <input type="text" id="brainstorm-input" data-i18n-placeholder="ideaPlaceholder" placeholder="New topic or solution proposal..." class="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-3 py-2 text-xs outline-none focus:border-zinc-500 dark:focus:border-zinc-400 transition-colors font-mono text-xs">
+                        <button id="add-brainstorm-btn" data-i18n="addBtn" class="px-4 py-2 bg-zinc-800 dark:bg-zinc-200 hover:opacity-90 text-white dark:text-zinc-900 text-xs font-mono font-semibold rounded transition-opacity">Add</button>
+                    </div>
+
+                    <!-- Ideas table -->
+                    <div class="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-zinc-100 dark:bg-zinc-900/60 font-mono text-[10px] text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
+                                <tr>
+                                    <th data-i18n="tblIdeaName" class="px-4 py-2.5 font-bold">Agenda Item / Idea Name</th>
+                                    <th data-i18n="tblDelete" class="px-4 py-2.5 text-right w-16 font-bold">Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody id="brainstorm-list" class="divide-y divide-zinc-100 dark:divide-zinc-850 font-mono text-xs">
+                                <!-- Dynamic elements -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- PRE-MEETING BRIEFING CONTEXT & WEBLINKS SECTION -->
+                    <div class="p-4 bg-zinc-100/50 dark:bg-zinc-900/20 border border-zinc-200 dark:border-zinc-800 rounded-xl space-y-4">
+                        <div class="space-y-0.5">
+                            <h3 data-i18n="preMeetingTitle" class="text-xs font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                                <i data-lucide="mail-open" class="w-4 h-4"></i> Pre-meeting Context & Links
+                            </h3>
+                            <p data-i18n="preMeetingDesc" class="text-[10px] text-zinc-500 leading-relaxed">Add background information and links to be sent out with the agenda before the meeting begins.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label data-i18n="preMeetingTextLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">Pre-meeting Context / Background Info</label>
+                                <textarea id="pre-meeting-context-text" data-i18n-placeholder="preMeetingNotesPlaceholder" rows="3" class="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded p-2 text-xs outline-none focus:border-emerald-500 font-sans leading-relaxed"></textarea>
+                            </div>
+                            <div class="space-y-1">
+                                <label data-i18n="preMeetingLinksLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">Reference Weblinks (one per line)</label>
+                                <textarea id="pre-meeting-links-text" data-i18n-placeholder="preMeetingLinksPlaceholder" rows="3" class="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded p-2 text-xs outline-none focus:border-emerald-500 font-mono leading-relaxed"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Before-meeting summary exporter -->
+                        <div class="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 space-y-2">
+                            <h4 data-i18n="preMeetingExportTitle" class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-bold">Before-Meeting Agenda & Pre-read Export</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <button id="pre-copy-md" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-white text-white dark:text-zinc-900 text-[10px] font-mono font-bold rounded flex items-center gap-1">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span data-i18n="btnCopyPreMeeting">Copy Pre-read (MD)</span>
+                                </button>
+                                <button id="pre-copy-chat" class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-mono font-bold rounded flex items-center gap-1">
+                                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i> <span data-i18n="btnCopyPreMeetingChat">Copy Pre-read (Chat)</span>
+                                </button>
+                                
+                                <div class="relative inline-block text-left">
+                                    <button id="pre-download-btn" class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-mono font-bold rounded flex items-center gap-1">
+                                        <i data-lucide="download" class="w-3.5 h-3.5"></i> <span data-i18n="btnDownloadPreMeeting">Download Pre-read</span>
+                                    </button>
+                                    <div id="pre-download-menu" class="hidden absolute right-0 bottom-full mb-1 z-10 w-44 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg">
+                                        <div class="py-1">
+                                            <button onclick="triggerPreMeetingDownload('md')" class="text-zinc-700 dark:text-zinc-300 block w-full px-3 py-2 text-left text-[10px] font-mono hover:bg-zinc-100 dark:hover:bg-zinc-850">Pre-read (.md - Markdown)</button>
+                                            <button onclick="triggerPreMeetingDownload('txt')" class="text-zinc-700 dark:text-zinc-300 block w-full px-3 py-2 text-left text-[10px] font-mono hover:bg-zinc-100 dark:hover:bg-zinc-850 border-t border-zinc-100 dark:border-zinc-850">Pre-read (.txt - Plain Text)</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: INTERACTIVE HELPER TOOLS -->
+                <div id="step-panel-4" class="step-panel space-y-5 max-w-4xl mx-auto hidden">
+                    <div class="space-y-0.5">
+                        <h2 data-i18n="step4Title" class="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Step 4: Interactive Helper Tools</h2>
+                        <p data-i18n="step4Desc" class="text-xs text-zinc-500 dark:text-zinc-400">Access external tactical frameworks to help make robust decisions during the meeting. Click any tool to open it.</p>
+                    </div>
+
+                    <!-- 2x2 Grid of Beautiful Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Eisenhower Matrix -->
+                        <a href="https://arminsarkozi.github.io/eisenhower-matrix/" target="_blank" class="block p-5 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-xl transition-all space-y-3 group shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400">
+                                    <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                                    <h3 class="font-bold text-sm">Eisenhower Matrix</h3>
+                                </div>
+                                <i data-lucide="external-link" class="w-4 h-4 text-zinc-400 group-hover:text-emerald-500 transition-colors"></i>
+                            </div>
+                            <p data-i18n="eisenhowerDesc" class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Prioritize tasks by urgency and importance to delegate or execute effectively.</p>
+                        </a>
+
+                        <!-- Amazon 6-pager -->
+                        <a href="https://arminsarkozi.github.io/6-pager/" target="_blank" class="block p-5 bg-sky-500/5 hover:bg-sky-500/10 border border-sky-500/10 hover:border-sky-500/30 rounded-xl transition-all space-y-3 group shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2 text-sky-600 dark:text-sky-400">
+                                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                                    <h3 class="font-bold text-sm">Amazon 6-pager</h3>
+                                </div>
+                                <i data-lucide="external-link" class="w-4 h-4 text-zinc-400 group-hover:text-sky-500 transition-colors"></i>
+                            </div>
+                            <p data-i18n="sixPagerDesc" class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Structure deep narrative memos for high-value strategic decision making.</p>
+                        </a>
+
+                        <!-- Idea Balance Sheet -->
+                        <a href="https://arminsarkozi.github.io/balance-sheet/" target="_blank" class="block p-5 bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/10 hover:border-amber-500/30 rounded-xl transition-all space-y-3 group shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
+                                    <i data-lucide="scale" class="w-5 h-5"></i>
+                                    <h3 class="font-bold text-sm">Idea Balance Sheet</h3>
+                                </div>
+                                <i data-lucide="external-link" class="w-4 h-4 text-zinc-400 group-hover:text-amber-500 transition-colors"></i>
+                            </div>
+                            <p data-i18n="balanceSheetDesc" class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">List advantages, disadvantages, and trade-offs of proposed solutions.</p>
+                        </a>
+
+                        <!-- Markdown to Presentation -->
+                        <a href="https://arminsarkozi.github.io/md-presentation/" target="_blank" class="block p-5 bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/10 hover:border-purple-500/30 rounded-xl transition-all space-y-3 group shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2 text-purple-600 dark:text-purple-400">
+                                    <i data-lucide="presentation" class="w-5 h-5"></i>
+                                    <h3 class="font-bold text-sm">Markdown to Presentation</h3>
+                                </div>
+                                <i data-lucide="external-link" class="w-4 h-4 text-zinc-400 group-hover:text-purple-500 transition-colors"></i>
+                            </div>
+                            <p data-i18n="mdPresentationDesc" class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Convert raw Markdown outlines instantly into clean slide decks for the team.</p>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- STEP 5: TASKS & PARKING -->
+                <div id="step-panel-5" class="step-panel space-y-5 max-w-3xl mx-auto hidden">
+                    <div class="space-y-0.5">
+                        <h2 data-i18n="step5Title" class="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Step 5: Tasks & Parking Lot</h2>
+                        <p data-i18n="step5Desc" class="text-xs text-zinc-500 dark:text-zinc-400">Assign precise tasks (Who-What-When) and park any off-topic conversations for later.</p>
+                    </div>
+
+                    <!-- TASK UNDERSTANDING / CLARITY LOOP -->
+                    <div class="p-3.5 bg-cyan-50/40 dark:bg-cyan-950/10 rounded-lg border border-cyan-200/50 dark:border-cyan-800/40 space-y-2">
+                        <h4 data-i18n="clarityCheckTitle" class="text-xs font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold flex items-center gap-1.5">
+                            <i data-lucide="user-check" class="w-4 h-4"></i> Task Understanding Check (Clarity Loop)
+                        </h4>
+                        <p data-i18n="clarityCheckDesc" class="text-[10px] text-zinc-500">HBR best practices suggest reviewing each task aloud before completing the meeting to verify that every assignee fully understands their responsibility.</p>
+                        <label class="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                            <input type="checkbox" id="tasks-confirmed-box" class="rounded border-zinc-300 dark:border-zinc-700 text-cyan-600 focus:ring-0">
+                            <span data-i18n="confirmTasksLabel">All tasks were reviewed and verbally confirmed with their owners.</span>
+                        </label>
+                    </div>
+
+                    <!-- Task Board -->
+                    <div class="space-y-3 bg-zinc-50 dark:bg-zinc-900/30 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                        <h3 data-i18n="addTaskTitle" class="text-xs font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold flex items-center gap-1.5">
+                            <i data-lucide="check-square" class="w-4 h-4"></i> Add New Task
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input type="text" id="task-what" data-i18n-placeholder="taskWhatPlaceholder" placeholder="What? (Task description)..." class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 font-sans">
+                            <input type="text" id="task-who" data-i18n-placeholder="taskWhoPlaceholder" placeholder="Who? (Assignee)..." class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 font-sans">
+                            <div class="flex gap-2">
+                                <input type="text" id="task-when" data-i18n-placeholder="taskWhenPlaceholder" placeholder="When? (Deadline)..." class="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 font-sans">
+                                <button id="add-task-btn" data-i18n="addBtn" class="px-3 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-semibold rounded">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Tasks Container -->
+                        <div class="space-y-3">
+                            <h4 data-i18n="tasksHeader" class="text-xs font-mono uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1">
+                                <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Assigned Tasks
+                            </h4>
+                            <div id="tasks-container" class="space-y-2 max-h-[260px] overflow-y-auto custom-scroll">
+                                <!-- Dynamic task list -->
+                            </div>
+                        </div>
+
+                        <!-- Parking Lot -->
+                        <div class="space-y-3">
+                            <h4 data-i18n="parkingHeader" class="text-xs font-mono uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1">
+                                <i data-lucide="clock" class="w-3.5 h-3.5"></i> Parking Lot (Postponed Topics)
+                            </h4>
+                            <div class="flex gap-1.5">
+                                <input type="text" id="parking-input" data-i18n-placeholder="parkingPlaceholder" placeholder="Capture off-topic discussion..." class="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-xs outline-none focus:border-zinc-500 font-sans">
+                                <button id="add-parking-btn" class="p-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded transition-colors">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div id="parking-container" class="space-y-2 max-h-[210px] overflow-y-auto custom-scroll font-mono">
+                                <!-- Dynamic items -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 6: AUDIT AND EXPORT -->
+                <div id="step-panel-6" class="step-panel space-y-5 max-w-4xl mx-auto hidden">
+                    <div class="space-y-0.5">
+                        <h2 data-i18n="step6Title" class="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Step 6: Evaluation and Export</h2>
+                        <p data-i18n="step6Desc" class="text-xs text-zinc-500 dark:text-zinc-400">Evaluate the meeting flow using Patrick Lencioni's method, then generate and share the summary.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Lencioni Checklist -->
+                        <div class="bg-zinc-50 dark:bg-zinc-900/30 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-4">
+                            <h3 data-i18n="lencioniTitle" class="text-xs font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-4 h-4"></i> Lencioni Tactical Check
+                            </h3>
+                            <p data-i18n="lencioniDesc" class="text-[11px] text-zinc-500 leading-relaxed">According to Patrick Lencioni, honest confrontation and committing to a decision even without full consensus are essential for successful meetings.</p>
+                            
+                            <div class="space-y-3 pt-2 text-xs font-sans">
+                                <label class="flex items-start gap-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100">
+                                    <input type="checkbox" id="audit-conflict" class="mt-0.5 rounded border-zinc-300 dark:border-zinc-700 text-emerald-600 focus:ring-0">
+                                    <span data-i18n="lencioniConflict">Did we voice hard, uncomfortable truths and opinions? (Conflict)</span>
+                                </label>
+                                <label class="flex items-start gap-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100">
+                                    <input type="checkbox" id="audit-clarity" class="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-0">
+                                    <span data-i18n="lencioniClarity">Does everyone clearly understand and support the agreed conclusions? (Clarity)</span>
+                                </label>
+                                <label class="flex items-start gap-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100">
+                                    <input type="checkbox" id="audit-commitment" class="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-0">
+                                    <span data-i18n="lencioniCommitment">Is everyone committed to the next steps? (Commitment)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Notes before Export -->
+                        <div class="space-y-2">
+                            <label data-i18n="rawNotesLabel" class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Additional Raw Notes (optional)</label>
+                            <textarea id="final-raw-notes" data-i18n-placeholder="rawNotesPlaceholder" rows="6" placeholder="Any other context, discussions, or key details you'd like to include in the final report..." class="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-3 py-2 text-xs outline-none focus:border-zinc-500 dark:focus:border-zinc-400 transition-colors resize-none leading-relaxed custom-scroll font-sans"></textarea>
+                        </div>
+                    </div>
+
+                    <hr class="border-zinc-200 dark:border-zinc-800">
+
+                    <!-- Export and preview window -->
+                    <div class="space-y-3">
+                        <!-- Dual Preview Tabs -->
+                        <div class="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                            <div class="flex gap-2">
+                                <button id="tab-btn-markdown" class="px-2.5 py-1 text-xs font-mono font-bold rounded bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900">Markdown</button>
+                                <button id="tab-btn-chat" class="px-2.5 py-1 text-xs font-mono text-zinc-500 dark:text-zinc-400">Chat (Slack/Teams)</button>
+                            </div>
+                            <span data-i18n="readyExport" class="text-[10px] font-mono text-emerald-500">Ready for export</span>
+                        </div>
+
+                        <!-- Markdown Content Box -->
+                        <textarea id="markdown-output" readonly class="w-full h-48 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded p-4 font-mono text-xs leading-relaxed text-zinc-700 dark:text-emerald-400 outline-none resize-none custom-scroll"></textarea>
+                        
+                        <!-- Chat Optimized Content Box -->
+                        <textarea id="chat-output" readonly class="hidden w-full h-48 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded p-4 font-mono text-xs leading-relaxed text-zinc-700 dark:text-cyan-400 outline-none resize-none custom-scroll"></textarea>
+                        
+                        <!-- Action elements with download utility -->
+                        <div class="flex flex-col sm:flex-row gap-3 pt-1">
+                            <button id="copy-markdown-btn" class="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-white text-white dark:text-zinc-900 rounded text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                                <i data-lucide="copy" class="w-4 h-4"></i> <span id="copy-btn-label" data-i18n="btnCopy">Copy Report</span>
+                            </button>
+                            
+                            <!-- Dropdown file utility -->
+                            <div class="flex-1 relative inline-block text-left">
+                                <button id="download-dropdown-btn" class="w-full h-full py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-850 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-zinc-700 dark:text-zinc-300">
+                                    <i data-lucide="download" class="w-4 h-4"></i> <span data-i18n="btnDownload">Download</span> <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <div id="download-dropdown-menu" class="hidden absolute right-0 z-10 mt-2 w-full origin-top-right rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                    <div class="py-1" role="none">
+                                        <button onclick="triggerFileDownload('md')" class="text-zinc-700 dark:text-zinc-300 block w-full px-4 py-2.5 text-left text-xs font-mono hover:bg-zinc-100 dark:hover:bg-zinc-800">Report (.md - Markdown)</button>
+                                        <button onclick="triggerFileDownload('txt')" class="text-zinc-700 dark:text-zinc-300 block w-full px-4 py-2.5 text-left text-xs font-mono hover:bg-zinc-100 dark:hover:bg-zinc-800 border-t border-zinc-100 dark:border-zinc-800">Report (.txt - Plain Text)</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="share-email-btn" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 rounded text-xs font-mono uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5">
+                                <i data-lucide="mail" class="w-4 h-4"></i> <span data-i18n="btnEmail">Send via Email</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Bottom navigational bar -->
+            <footer class="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-3 flex justify-between items-center shrink-0 shadow-inner">
+                <button id="prev-step-btn" class="px-3.5 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded text-xs font-mono font-bold transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> <span data-i18n="btnPrev">Previous</span>
+                </button>
+                <span class="text-xs font-mono text-zinc-400" id="step-indicator">Step: 1 / 6</span>
+                <button id="next-step-btn" class="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-white text-white dark:text-zinc-900 rounded text-xs font-mono font-bold transition-colors flex items-center gap-1.5">
+                    <span id="next-btn-label" data-i18n="btnNext">Next</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </footer>
+
+        </section>
+
+    </main>
+
+    <!-- Toast window notifications -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-zinc-950 border border-emerald-500 text-zinc-200 px-4 py-3 rounded shadow-2xl transition-all transform translate-y-20 opacity-0 flex items-center space-x-2 text-xs font-mono z-50">
+        <i data-lucide="check" class="w-4 h-4 text-emerald-400" id="toast-icon"></i>
+        <span id="toast-msg">Successfully copied!</span>
+    </div>
+
+    <script>
+        const i18n = {
+            en: {
+                statusLabel: "Meeting Pilot",
+                demoBtn: "Load Demo",
+                resetBtn: "Reset",
+                step1: "1. kickoff",
+                step2: "2. past tasks",
+                step3: "3. agenda planner",
+                step4: "4. helper",
+                step5: "5. tasks",
+                step6: "6. audit & export",
+                goalLabel: "Main question:",
+                noGoal: "No goal specified.",
+                burnSuffix: "h burned",
+                timerStart: "Start",
+                timerPause: "Pause",
+                step1Title: "Step 1: Kickoff",
+                step1Desc: "Set the boundaries, define the main topic, and optionally import any actions left over from the last meeting.",
+                meetingNameLabel: "Meeting Name",
+                meetingNamePlaceholder: "e.g., Weekly Tactical Sync...",
+                attendeesCountLabel: "Number of Attendees",
+                goalLabelLong: "The meeting's single main question (Goal)",
+                goalPlaceholder: "What is the single question or problem we must answer by the end of today?",
+                targetDurationLabel: "Target Duration (minutes)",
+                attendeeNamesLabel: "Attendee Names (optional)",
+                attendeeNamesPlaceholder: "Comma separated...",
+                importTasksTitle: "Import Past Tasks (optional)",
+                importTasksDesc: "Paste the action plan or tasks from your last meeting. The system flexibly detects dates (e.g. 06.15, 2026.06.15 or in parentheses).",
+                importTasksPlaceholder: "Example:\n| Anna Kovacs | Facebook campaign | 06.15. |\nOr: Anna Kovacs: Facebook campaign (Deadline: 2026.06.15)",
+                importProcessBtn: "Process and Load",
+                step2Title: "Step 2: Review past tasks",
+                step2Desc: "Check off the past tasks that have been successfully **completed**. Unchecked tasks (in progress) will automatically move to today's task list.",
+                tblDone: "Done?",
+                tblAssignee: "Assignee & Task Description",
+                tblDeadline: "Deadline",
+                tblStatus: "Status",
+                tblEmptyPast: "No imported past tasks yet. Go to Step 1 and paste a list!",
+                badgeDone: "DONE",
+                badgeToToday: "MOVE TO TODAY",
+                step3Title: "Step 3: Agenda Planner",
+                step3Desc: "Load templates or build agenda items from scratch.",
+                ideaPlaceholder: "New topic or solution proposal...",
+                addBtn: "Add",
+                tblIdeaName: "Agenda Item / Idea Name",
+                tblDelete: "Delete",
+                tblEmptyIdeas: "No items added yet. Choose a template above or type to add!",
+                agendaTemplatesLabel: "Structure Templates",
+                agendaTemplatesDesc: "Speed up scheduling by populating items with predefined strategic outlines.",
+                tmplLoadBtn: "Load Template",
+                tmplTactical: "Weekly Tactical Sync",
+                tmplBrainstorm: "Structured Brainstorming",
+                tmplRetro: "Sprint Retrospective",
+                tmplKickoff: "Project Kickoff",
+                step4Title: "Step 4: Interactive Helper Tools",
+                step4Desc: "Access external tactical frameworks to help make robust decisions during the meeting. Click any tool to open it.",
+                step5Title: "Step 5: Tasks & Parking Lot",
+                step5Desc: "Assign precise tasks (Who-What-When) and park any off-topic conversations for later.",
+                addTaskTitle: "Add New Task",
+                taskWhatPlaceholder: "What? (Task description)...",
+                taskWhoPlaceholder: "Who? (Assignee)...",
+                taskWhenPlaceholder: "When? (Deadline)...",
+                tasksHeader: "Assigned Tasks",
+                tasksEmpty: "No tasks assigned yet...",
+                parkingHeader: "Parking Lot (Postponed Topics)",
+                parkingPlaceholder: "Capture off-topic discussion...",
+                parkingEmpty: "The parking lot is empty...",
+                step6Title: "Step 6: Evaluation and Export",
+                step6Desc: "Evaluate the meeting flow using Patrick Lencioni's method, then generate and share the summary.",
+                lencioniTitle: "Lencioni Tactical Check",
+                lencioniDesc: "According to Patrick Lencioni, honest confrontation and committing to a decision even without full consensus are essential for successful meetings.",
+                lencioniConflict: "Did we voice hard, uncomfortable truths and opinions? (Conflict)",
+                lencioniClarity: "Does everyone clearly understand and support the agreed conclusions? (Clarity)",
+                lencioniCommitment: "Is everyone committed to the next steps? (Commitment)",
+                rawNotesLabel: "Additional Raw Notes (optional)",
+                rawNotesPlaceholder: "Any other context, discussions, or key details you'd like to include in the final report...",
+                previewLabel: "Report Preview (Markdown & Text)",
+                readyExport: "Ready for export",
+                btnCopy: "Copy Markdown",
+                btnCopyChat: "Copy Chat Message",
+                btnDownload: "Download",
+                btnEmail: "Send via Email",
+                btnPrev: "Previous",
+                btnNext: "Next",
+                btnFinish: "Finish",
+                indicatorStep: "Step: {step} / 6",
+                toastCopied: "Report copied to clipboard!",
+                toastChatCopied: "Slack/Teams message copied!",
+                toastCopyError: "Error copying to clipboard.",
+                toastEmptyImport: "Empty import area!",
+                toastImportSuccess: "Successfully imported {count} tasks!",
+                toastImportFail: "No tasks detected in the text.",
+                toastEmailClient: "Opening email client...",
+                toastDownloadSuccess: "Successfully downloaded: {file}",
+                toastReset: "Application successfully cleared and reset!",
+                toastDemo: "Demo data successfully loaded!",
+                mdTitle: "MEETING SUMMARY",
+                mdDuration: "Duration",
+                mdPlanned: "Planned",
+                mdBurned: "Estimated resource cost",
+                mdAttendees: "Attendees list",
+                mdGoal: "Main question / goal",
+                mdAgendaTitle: "Agenda Items",
+                mdTasks: "Action Plan",
+                mdParking: "Parking Lot",
+                mdNoParking: "The parking lot remained empty.",
+                mdAudit: "Patrick Lencioni Tactical Audit",
+                mdAuditConflictSuccess: "We voiced honest/hard opinions too.",
+                mdAuditConflictFail: "Uncomfortable opinions were left unsaid.",
+                mdAuditClaritySuccess: "The agreed conclusions are completely clear and plain.",
+                mdAuditClarityFail: "Conclusions were not fully clarified.",
+                mdAuditCommitmentSuccess: "The team committed to the decision.",
+                mdAuditCommitmentFail: "Commitment remained questionable.",
+                mdRawNotesTitle: "Additional Notes",
+                mdNoRawNotes: "No additional notes were recorded.",
+                mdFooter: "Summary automatically generated with Meeting Pilot.",
+                randomChooserTitle: "Devil's Advocate Chooser",
+                randomChooserDesc: "Instantly pick a participant and a provocative question to test consensus and combat artificial harmony.",
+                pairWithQuestion: "Pair with a question",
+                spinBtn: "Pick Candidate",
+                clarityCheckTitle: "Task Clarity Loop",
+                clarityCheckDesc: "HBR best practices suggest reviewing each task aloud before completing the meeting to verify that every assignee fully understands their responsibility.",
+                confirmTasksLabel: "All tasks were reviewed and verbally confirmed with their owners.",
+                targetLabel: "Target:",
+                noAttendeesAlert: "Please add attendee names in Step 1 first!",
+                tmplWeeklyRound: "Lightning Round: Individual Priorities",
+                tmplWeeklyMetrics: "Review key operations & dashboards",
+                tmplWeeklyBottlenecks: "Identify roadblocks & deep-dives",
+                tmplBrainstormGoals: "Align on creative goals & constraints",
+                tmplBrainstormIdeation: "Silent ideation (2 minutes individual draft)",
+                tmplBrainstormPitch: "Pitching & selecting candidates",
+                tmplRetroGood: "What went exceptionally well?",
+                tmplRetroImprove: "Where did we stumble?",
+                tmplRetroActions: "Concrete adjustments for next cycle",
+                tmplKickoffScope: "Scope boundaries & project success criteria",
+                tmplKickoffRoles: "Responsibility allocation (RACI matrix sync)",
+                tmplKickoffTimeline: "Key milestones & delivery schedule",
+                eisenhowerDesc: "Prioritize tasks by urgency and importance to delegate or execute effectively.",
+                sixPagerDesc: "Structure deep narrative memos for high-value strategic decision making.",
+                balanceSheetDesc: "List advantages, disadvantages, and trade-offs of proposed solutions.",
+                mdPresentationDesc: "Convert raw Markdown outlines instantly into clean slide decks for the team.",
+                preMeetingTitle: "Pre-meeting Context & Links",
+                preMeetingDesc: "Add background information and links to be sent out with the agenda before the meeting begins.",
+                preMeetingTextLabel: "Pre-meeting Context / Background Info",
+                preMeetingLinksLabel: "Reference Weblinks (one per line)",
+                preMeetingLinksPlaceholder: "https://example.com/briefing-doc\nhttps://example.com/analytics-dashboard",
+                preMeetingNotesPlaceholder: "Provide a short background context, questions to consider, or instructions for prep work here...",
+                preMeetingExportTitle: "Before-Meeting Agenda & Pre-read Export",
+                btnCopyPreMeeting: "Copy Pre-read (MD)",
+                btnCopyPreMeetingChat: "Copy Pre-read (Chat)",
+                btnDownloadPreMeeting: "Download Pre-read",
+                toastPreMeetingCopied: "Before-meeting agenda copied to clipboard!",
+                toastPreMeetingChatCopied: "Before-meeting chat message copied!"
+            },
+            hu: {
+                statusLabel: "Meeting Pilot",
+                demoBtn: "Demó betöltése",
+                resetBtn: "Alaphelyzet",
+                step1: "1. indítás",
+                step2: "2. korábbi feladatok",
+                step3: "3. megbeszélendő",
+                step4: "4. segédeszközök",
+                step5: "5. feladatok",
+                step6: "6. audit & export",
+                goalLabel: "Fő kérdés:",
+                noGoal: "Nincs megadva cél.",
+                burnSuffix: "ó elégetve",
+                timerStart: "Start",
+                timerPause: "Szünet",
+                step1Title: "1. lépés: Megbeszélés indítása",
+                step1Desc: "Határozd meg a kereteket, a fő témát, és importáld az előző megbeszélésről maradt feladataidat.",
+                meetingNameLabel: "Megbeszélés megnevezése",
+                meetingNamePlaceholder: "pl. Heti Taktikai Szinkron...",
+                attendeesCountLabel: "Résztvevők száma",
+                goalLabelLong: "A megbeszélés egyetlen fő kérdése (Cél)",
+                goalPlaceholder: "Mi az az egyetlen kérdés vagy probléma, amire választ kell kapnunk a mai nap végén?",
+                targetDurationLabel: "Tervezett időkeret (perc)",
+                attendeeNamesLabel: "Résztvevők nevei (opcionális)",
+                attendeeNamesPlaceholder: "Vesszővel elválasztva...",
+                importTasksTitle: "Korábbi feladatok importálása (opcionális)",
+                importTasksDesc: "Másold be az előző megbeszélés akciótervét vagy szöveges feladatait. A rendszer rugalmasan felismeri a dátumokat (pl. 06.15, 2026.06.15. vagy zárójelben is).",
+                importTasksPlaceholder: "Például:\n| Kovács Anna | Facebook kampányok indítása | 06.15. |\nVagy: Kovács Anna: Facebook kampányok indítása (Határidő: 2026.06.15)",
+                importProcessBtn: "Feldolgozás és betöltés",
+                step2Title: "2. lépés: Korábbi feladatok ellenőrzése",
+                step2Desc: "Jelöld be azokat a korábbi feladatokat, amelyek már sikeresen **elkészültek**. A bejelöletlenek (folyamatban lévők) automatikusan átkerülnek a mai megbeszélés feladatai közé.",
+                tblDone: "Kész?",
+                tblAssignee: "Felelős & Feladat leírása",
+                tblDeadline: "Határidő",
+                tblStatus: "Státusz",
+                tblEmptyPast: "Még nincsenek beimportált korábbi feladatok. Menj az 1. lépésre és másolj be egy listát!",
+                badgeDone: "KÉSZ",
+                badgeToToday: "MAI LISTÁRA MEGY",
+                step3Title: "3. lépés: Megbeszélendő témák és ötletek",
+                step3Desc: "Tölts be sablonokat vagy rögzíts témákat a semmiből.",
+                ideaPlaceholder: "Új téma vagy megoldási javaslat...",
+                addBtn: "Hozzáadás",
+                tblIdeaName: "Megbeszélendő téma / ötlet megnevezése",
+                tblDelete: "Törlés",
+                tblEmptyIdeas: "Még nincsenek elemek. Válassz sablont fent vagy rögzíts újat!",
+                agendaTemplatesLabel: "Szerkezeti sablonok",
+                agendaTemplatesDesc: "Gyorsítsd meg a tervezést előre tesztelt megbeszélési vázlatok betöltésével.",
+                tmplLoadBtn: "Sablon betöltése",
+                tmplTactical: "Heti Taktikai Szinkron",
+                tmplBrainstorm: "Strukturált Ötletelés",
+                tmplRetro: "Sprint Retrospektív",
+                tmplKickoff: "Projekt Kickoff",
+                step4Title: "4. lépés: Interaktív segédeszközök",
+                step4Desc: "Érj el külső taktikai keretrendszereket, amelyek segítenek a megalapozott döntések meghozatalában. Kattints bármelyik eszközre a megnyitásához.",
+                step5Title: "5. lépés: Feladatok & Parkoló",
+                step5Desc: "Rögzítsétek a pontos feladatokat (Who-What-When) és mentsétek el a parkolópályára tett elkalandozásokat.",
+                addTaskTitle: "Új feladat hozzáadása",
+                taskWhatPlaceholder: "Mit? (Feladat leírása)...",
+                taskWhoPlaceholder: "Ki? (Felelős személy)...",
+                taskWhenPlaceholder: "Mikor? (Határidő)...",
+                tasksHeader: "Rögzített feladatok",
+                tasksEmpty: "Még nincsenek rögzített feladatok...",
+                parkingHeader: "Parkoló (Elhalasztott témák)",
+                parkingPlaceholder: "Elkalandozó téma rögzítése...",
+                parkingEmpty: "A parkoló üres...",
+                step6Title: "6. lépés: Értékelés és exportálás",
+                step6Desc: "Értékeld a megbeszélés menetét Patrick Lencioni módszerével, majd generáld és oszd meg az összefoglalót.",
+                lencioniTitle: "Lencioni taktikai ellenőrzés",
+                lencioniDesc: "Patrick Lencioni alapján a sikeres meetingekhez elengedhetetlen az őszinte konfrontáció és a teljes egyetértés hiányában is megszülető elköteleződés.",
+                lencioniConflict: "Kimondtuk a nehéz, kényelmetlen igazságokat és véleményeket? (Konfliktus)",
+                lencioniClarity: "Mindenki pontosan érti és támogatja a megbeszélt konklúziókat? (Világosság)",
+                lencioniCommitment: "Mindenki elköteleződött a következő lépések mellett? (Elköteleződés)",
+                rawNotesLabel: "További szabad jegyzetek (opcionális)",
+                rawNotesPlaceholder: "Bármilyen egyéb kontextus, vita, fontos részlet, amit szeretnél beemelni a végső exportált jelentésbe...",
+                previewLabel: "Jelentés előnézet (Markdown & Text)",
+                readyExport: "Kész az exportálásra",
+                btnCopy: "Markdown másolása",
+                btnCopyChat: "Chat üzenet másolása",
+                btnDownload: "Letöltés",
+                btnEmail: "Küldés e-mailben",
+                btnPrev: "Előző",
+                btnNext: "Következő",
+                btnFinish: "Kész",
+                indicatorStep: "Lépés: {step} / 6",
+                toastCopied: "Markdown formátumban átmásolva a vágólapra!",
+                toastChatCopied: "Chat (Slack/Teams) üzenet átmásolva!",
+                toastCopyError: "Hiba a vágólapra másolás során.",
+                toastEmptyImport: "Üres import terület!",
+                toastImportSuccess: "Sikeresen importálva: {count} db feladat!",
+                toastImportFail: "Nem sikerült feladatokat azonosítani a szövegben.",
+                toastEmailClient: "E-mail kliens megnyitása...",
+                toastDownloadSuccess: "Sikeres letöltés: {file}",
+                toastReset: "Alkalmazás sikeresen kiürítve és visszaállítva!",
+                toastDemo: "Demó adatok sikeresen betöltve!",
+                mdTitle: "MEETING ÖSSZEFOGLALÓ",
+                mdDuration: "Időtartam",
+                mdPlanned: "Tervezett",
+                mdBurned: "Megbeszélés becsült erőforrás-igénye",
+                mdAttendees: "Résztvevők listája",
+                mdGoal: "A megbeszélés egyetlen fő kérdése",
+                mdAgendaTitle: "Napirendi Pontok",
+                mdTasks: "Feladatok",
+                mdParking: "Parkolópályára tett témák (Parking Lot)",
+                mdNoParking: "A parkoló üres maradt.",
+                mdAudit: "Patrick Lencioni Taktikai Audit",
+                mdAuditConflictSuccess: "Kimondtuk az őszinte/nehéz véleményeket is.",
+                mdAuditConflictFail: "A kellemetlen vélemények elhallgatásra kerültek.",
+                mdAuditClaritySuccess: "A megbeszélt konklúziók teljesen tiszták és egyértelműek.",
+                mdAuditClarityFail: "A konklúziók nem lettek teljes mértékben letisztázva.",
+                mdAuditCommitmentSuccess: "A csapat elköteleződött a döntés mellett.",
+                mdAuditCommitmentFail: "Az elkötelezettség kérdéses maradt.",
+                mdRawNotesTitle: "További Jegyzetek",
+                mdNoRawNotes: "Nem rögzítettünk egyéb jegyzetet.",
+                mdFooter: "Összefoglaló automatikusan generálva a Meeting Pilot asszisztenssel.",
+                randomChooserTitle: "Résztvevő-sorsoló (Ördög ügyvédje)",
+                randomChooserDesc: "Válassz ki véletlenszerűen egy résztvevőt és egy provokatív kérdést az álegyetértés szétverésére.",
+                pairWithQuestion: "Kérdéssel együtt",
+                spinBtn: "Résztvevő sorsolása",
+                clarityCheckTitle: "Feladat Megértési Kör",
+                clarityCheckDesc: "A HBR kutatások alapján ajánlott minden feladatot hangosan átbeszélni a megbeszélés végén, hogy minden felelős pontosan értse a feladatát.",
+                confirmTasksLabel: "Minden feladatot hangosan átnéztünk és a felelősök szóban megerősítették.",
+                targetLabel: "Célpont:",
+                noAttendeesAlert: "Kérlek, először adj meg résztvevőket az 1. lépésnél!",
+                tmplWeeklyRound: "Villámkör: Egyéni prioritások",
+                tmplWeeklyMetrics: "Kulcsfontosságú mutatók & dashboardok áttekintése",
+                tmplWeeklyBottlenecks: "Problémás területek & mélyfúrások rögzítése",
+                tmplBrainstormGoals: "Célok, korlátok és sikerkritériumok egyeztetése",
+                tmplBrainstormIdeation: "Csendes ötletelés (2 perc egyéni vázlatírás)",
+                tmplBrainstormPitch: "Ötletek prezentálása & kiértékelendők kiválasztása",
+                tmplRetroGood: "Mi ment kiemelkedően jól?",
+                tmplRetroImprove: "Hol akadtunk el / miben hibáztunk?",
+                tmplRetroActions: "Konkrét fejlesztések a következő ciklusra",
+                tmplKickoffScope: "Határok, scope és a projekt sikerkritériumai",
+                tmplKickoffRoles: "Felelősségek felosztása (RACI mátrix szinkron)",
+                tmplKickoffTimeline: "Mérföldkövek és szállítási ütemterv egyeztetése",
+                eisenhowerDesc: "Priorizáld a feladataidat sürgősség és fontosság szerint a hatékony delegáláshoz.",
+                sixPagerDesc: "Strukturálj mélyreható narratív feljegyzéseket a magas szintű stratégiai döntésekhez.",
+                balanceSheetDesc: "Mérlegeld a javasolt megoldások előnyeit, hátrányait és kompromisszumait.",
+                mdPresentationDesc: "Alakítsd át a nyers Markdown vázlatokat azonnal letisztult bemutató diákká.",
+                preMeetingTitle: "Megbeszélés előtti kontextus & linkek",
+                preMeetingDesc: "Adj meg háttérinformációkat és linkeket, amelyeket a napirenddel együtt elküldhetsz a megbeszélés előtt.",
+                preMeetingTextLabel: "Megbeszélés előtti kontextus / Háttérinformáció",
+                preMeetingLinksLabel: "Hivatkozás linkek (soronként egy)",
+                preMeetingLinksPlaceholder: "https://pelda.hu/tajekoztato\nhttps://pelda.hu/statisztika",
+                preMeetingNotesPlaceholder: "Adj meg egy rövid háttér-összefoglalót, megfontolandó kérdéseket vagy felkészülési utasításokat...",
+                preMeetingExportTitle: "Megbeszélés előtti agenda & felkészülési anyag exportálása",
+                btnCopyPreMeeting: "Felkészülési anyag másolása (MD)",
+                btnCopyPreMeetingChat: "Felkészülési anyag másolása (Chat)",
+                btnDownloadPreMeeting: "Letöltés",
+                toastPreMeetingCopied: "A megbeszélés előtti agenda átmásolva a vágólapra!",
+                toastPreMeetingChatCopied: "A megbeszélés előtti chat üzenet átmásolva!"
+            }
+        };
+
+        let state = {
+            currentStep: 1,
+            title: "",
+            attendeesCount: 5,
+            attendeesNames: "",
+            goal: "",
+            targetDuration: 30,
+            elapsedSeconds: 0,
+            timerRunning: false,
+            lang: "en", 
+
+            ideas: [],
+            importedTasks: [],
+            tasks: [],
+            tasksConfirmed: false,
+            parking: [],
+
+            // Pre-meeting fields
+            preMeetingText: "",
+            preMeetingLinks: "",
+
+            auditConflict: false,
+            auditClarity: false,
+            auditCommitment: false,
+
+            rawNotes: ""
+        };
+
+        const devPrompts = {
+            en: [
+                "What is the weakest or most fragile assumption in this current plan?",
+                "If we had exactly half of our current budget, how would we solve this?",
+                "What assumption are we making right now that might be completely false?",
+                "Who in this room is likely to disagree with this, and why?",
+                "How would our closest competitor try to sabotage this strategy?",
+                "What are we deliberately NOT discussing right now that we should be?"
+            ],
+            hu: [
+                "Mi a leggyengébb vagy legsérülékenyebb feltételezésünk ebben a tervben?",
+                "Ha pontosan a jelenlegi költségvetés fele állna rendelkezésre, hogyan oldanánk meg?",
+                "Milyen olyan feltételezést teszünk most, ami teljesen hibás lehet?",
+                "Ki az a csapatban, aki valószínűleg nem ért ezzel egyet, és miért?",
+                "Hogyan próbálná meg a legfőbb versenytársunk szabotálni ezt a stratégiát?",
+                "Mi az a téma, amit most szándékosan kerülünk, pedig beszélnünk kellene róla?"
+            ]
+        };
+
+        const demoData = {
+            en: {
+                title: "Weekly Tactical Sync",
+                attendeesCount: 5,
+                attendeesNames: "Anna Kovacs, Gabriel Great, Peter Kiss, Jane Doe",
+                goal: "What is our Q3 focus?",
+                targetDuration: 30,
+                importedTasks: [
+                    { id: "demo-it-1", what: "Review Q2 results and lock documentation", who: "Gabriel Great", when: "06.01.", completed: true },
+                    { id: "demo-it-2", what: "Refine dynamic API specs", who: "Peter Kiss", when: "2026.05.28", completed: false }
+                ],
+                ideas: [
+                    { id: 1, name: "Expand digital advertising campaign scope" },
+                    { id: 2, name: "Automate internal operation pipelines" },
+                    { id: 3, name: "Test brand-new social channels (TikTok Ads)" }
+                ],
+                tasks: [
+                    { id: "demo-task-1", what: "Initiate main Facebook ad campaigns", who: "Anna Kovacs", when: "06.15." }
+                ],
+                preMeetingText: "We need to align on the upcoming marketing channels and analyze if dynamic API limits need adjustments.",
+                preMeetingLinks: "https://example.com/briefing-doc\nhttps://example.com/analytics-dashboard",
+                tasksConfirmed: true,
+                parking: ["Discuss premium coffee machine options"],
+                rawNotes: "Peter highlighted that operational stability must precede any vertical scale operations."
+            },
+            hu: {
+                title: "Heti Taktikai Szinkron",
+                attendeesCount: 5,
+                attendeesNames: "Kovács Anna, Nagy Gábor, Kiss Péter, Horváth János",
+                goal: "Mi a Q3-as fókuszunk?",
+                targetDuration: 30,
+                importedTasks: [
+                    { id: "demo-it-1", what: "Q2 értékelés lezárása", who: "Nagy Gábor", when: "06.01.", completed: true },
+                    { id: "demo-it-2", what: "API dokumentáció pontosítása", who: "Kiss Péter", when: "2026.05.28", completed: false }
+                ],
+                ideas: [
+                    { id: 1, name: "A digitális marketing keret növelése" },
+                    { id: 2, name: "Belső folyamatok automatizálása" },
+                    { id: 3, name: "Új csatornák tesztelése (TikTok hirdetés)" }
+                ],
+                tasks: [
+                    { id: "demo-task-1", what: "Facebook kampányok indítása", who: "Kovács Anna", when: "06.15." }
+                ],
+                preMeetingText: "Szeretnénk tisztázni a marketing csatornák elosztását és megbeszélni a technikai API korlátokat.",
+                preMeetingLinks: "https://pelda.hu/marketing-anyag\nhttps://pelda.hu/fejlesztesi-terv",
+                tasksConfirmed: true,
+                parking: ["Kávégép csere kérdése"],
+                rawNotes: "Péter megjegyezte, hogy a belső folyamatokat is át kell nézni mielőtt skálázunk."
+            }
+        };
+
+        let timerInterval = null;
+        let activeExportTab = 'markdown';
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            loadState();
+            lucide.createIcons();
+            setupEventListeners();
+            updateLanguage(state.lang);
+        });
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('meeting_pilot_theme') || 'dark';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('meeting_pilot_wizard_state_v5');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    parsed.timerRunning = false; 
+                    state = parsed;
+                } catch (e) {
+                    console.error("Error loading workspace state:", e);
+                }
+            } else {
+                state.lang = localStorage.getItem('meeting_pilot_lang') || 'en';
+                state.title = state.lang === 'en' ? "Weekly Tactical Sync" : "Heti Taktikai Szinkron";
+                state.goal = state.lang === 'en' ? "What is our Q3 focus?" : "Mi a Q3-as fókuszunk?";
+                state.attendeesNames = state.lang === 'en' ? "Anna Kovacs, Gabriel Great, Peter Kiss" : "Kovács Anna, Nagy Gábor, Kiss Péter";
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('meeting_pilot_wizard_state_v5', JSON.stringify(state));
+        }
+
+        function updateLanguage(lang) {
+            state.lang = lang;
+            localStorage.setItem('meeting_pilot_lang', lang);
+            saveState();
+
+            const btnEn = document.getElementById('lang-btn-en');
+            const btnHu = document.getElementById('lang-btn-hu');
+            
+            if (lang === 'en') {
+                btnEn.className = "px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold shadow-sm transition-all";
+                btnHu.className = "px-1.5 py-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-all";
+            } else {
+                btnHu.className = "px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold shadow-sm transition-all";
+                btnEn.className = "px-1.5 py-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-all";
+            }
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) {
+                    el.textContent = i18n[lang][key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (i18n[lang][key]) {
+                    el.setAttribute('placeholder', i18n[lang][key]);
+                }
+            });
+
+            const select = document.getElementById('agenda-template-select');
+            Array.from(select.options).forEach(opt => {
+                const key = opt.getAttribute('data-i18n');
+                if (key && i18n[lang][key]) {
+                    opt.textContent = i18n[lang][key];
+                }
+            });
+
+            syncInputsFromState();
+            updateStepView();
+            renderAll();
+        }
+
+        function syncInputsFromState() {
+            document.getElementById('input-title').value = state.title;
+            document.getElementById('input-attendees').value = state.attendeesCount;
+            document.getElementById('input-names').value = state.attendeesNames;
+            document.getElementById('input-goal').value = state.goal;
+            document.getElementById('input-duration').value = state.targetDuration;
+            
+            document.getElementById('pre-meeting-context-text').value = state.preMeetingText || "";
+            document.getElementById('pre-meeting-links-text').value = state.preMeetingLinks || "";
+
+            document.getElementById('final-raw-notes').value = state.rawNotes;
+
+            document.getElementById('audit-conflict').checked = state.auditConflict;
+            document.getElementById('audit-clarity').checked = state.auditClarity;
+            document.getElementById('audit-commitment').checked = state.auditCommitment;
+            document.getElementById('tasks-confirmed-box').checked = state.tasksConfirmed;
+            
+            updateGoalHeader();
+        }
+
+        function updateGoalHeader() {
+            document.getElementById('active-goal-box').textContent = state.goal ? state.goal : i18n[state.lang].noGoal;
+        }
+
+        function setupEventListeners() {
+            document.getElementById('lang-btn-en').addEventListener('click', () => updateLanguage('en'));
+            document.getElementById('lang-btn-hu').addEventListener('click', () => updateLanguage('hu'));
+
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('meeting_pilot_theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('meeting_pilot_theme', 'dark');
+                }
+            });
+
+            document.getElementById('system-reset').addEventListener('click', resetWholeApp);
+            document.getElementById('system-demo').addEventListener('click', loadDemoDataToApp);
+
+            document.getElementById('input-title').addEventListener('input', (e) => { state.title = e.target.value; saveState(); });
+            document.getElementById('input-attendees').addEventListener('input', (e) => { state.attendeesCount = parseInt(e.target.value) || 1; saveState(); updateTimerDisplay(); });
+            document.getElementById('input-names').addEventListener('input', (e) => { state.attendeesNames = e.target.value; saveState(); });
+            document.getElementById('input-goal').addEventListener('input', (e) => { 
+                state.goal = e.target.value; 
+                updateGoalHeader();
+                saveState(); 
+            });
+            document.getElementById('input-duration').addEventListener('input', (e) => { state.targetDuration = parseInt(e.target.value) || 30; saveState(); updateTimerDisplay(); });
+
+            document.getElementById('pre-meeting-context-text').addEventListener('input', (e) => { state.preMeetingText = e.target.value; saveState(); });
+            document.getElementById('pre-meeting-links-text').addEventListener('input', (e) => { state.preMeetingLinks = e.target.value; saveState(); });
+
+            document.getElementById('trigger-import-btn').addEventListener('click', importPreviousActionPlan);
+            document.getElementById('chooser-spin-btn').addEventListener('click', spinDevilAdvocate);
+            document.getElementById('agenda-template-btn').addEventListener('click', loadAgendaTemplate);
+
+            document.getElementById('final-raw-notes').addEventListener('input', (e) => { state.rawNotes = e.target.value; saveState(); generateMarkdown(); generateChatOptimized(); });
+            document.getElementById('audit-conflict').addEventListener('change', (e) => { state.auditConflict = e.target.checked; saveState(); generateMarkdown(); generateChatOptimized(); });
+            document.getElementById('audit-clarity').addEventListener('change', (e) => { state.auditClarity = e.target.checked; saveState(); generateMarkdown(); generateChatOptimized(); });
+            document.getElementById('audit-commitment').addEventListener('change', (e) => { state.auditCommitment = e.target.checked; saveState(); generateMarkdown(); generateChatOptimized(); });
+            document.getElementById('tasks-confirmed-box').addEventListener('change', (e) => { state.tasksConfirmed = e.target.checked; saveState(); generateMarkdown(); generateChatOptimized(); });
+
+            document.getElementById('prev-step-btn').addEventListener('click', () => moveStep(-1));
+            document.getElementById('next-step-btn').addEventListener('click', () => moveStep(1));
+
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`step-nav-${i}`).addEventListener('click', () => {
+                    state.currentStep = i;
+                    saveState();
+                    updateStepView();
+                });
+            }
+
+            document.getElementById('timer-toggle-btn').addEventListener('click', toggleTimer);
+            document.getElementById('timer-reset-btn').addEventListener('click', resetTimer);
+
+            document.getElementById('add-brainstorm-btn').addEventListener('click', addBrainstormIdea);
+            document.getElementById('brainstorm-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') addBrainstormIdea(); });
+
+            document.getElementById('add-task-btn').addEventListener('click', addTask);
+            document.getElementById('add-parking-btn').addEventListener('click', addParkingItem);
+            document.getElementById('parking-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') addParkingItem(); });
+
+            document.getElementById('tab-btn-markdown').addEventListener('click', () => switchExportTab('markdown'));
+            document.getElementById('tab-btn-chat').addEventListener('click', () => switchExportTab('chat'));
+
+            document.getElementById('copy-markdown-btn').addEventListener('click', copySelectedOutputToClipboard);
+            document.getElementById('share-email-btn').addEventListener('click', shareViaEmail);
+
+            // Pre-meeting export buttons
+            document.getElementById('pre-copy-md').addEventListener('click', () => copyPreMeetingSummary('md'));
+            document.getElementById('pre-copy-chat').addEventListener('click', () => copyPreMeetingSummary('chat'));
+
+            const dlBtn = document.getElementById('download-dropdown-btn');
+            const dlMenu = document.getElementById('download-dropdown-menu');
+            dlBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dlMenu.classList.toggle('hidden');
+            });
+
+            const preDlBtn = document.getElementById('pre-download-btn');
+            const preDlMenu = document.getElementById('pre-download-menu');
+            preDlBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                preDlMenu.classList.toggle('hidden');
+            });
+            
+            document.addEventListener('click', () => {
+                dlMenu.classList.add('hidden');
+                preDlMenu.classList.add('hidden');
+            });
+        }
+
+        function moveStep(direction) {
+            let nextStep = state.currentStep + direction;
+            if (nextStep >= 1 && nextStep <= 6) {
+                state.currentStep = nextStep;
+                saveState();
+                updateStepView();
+            }
+        }
+
+        function updateStepView() {
+            document.querySelectorAll('.step-panel').forEach(panel => panel.classList.add('hidden'));
+            document.getElementById(`step-panel-${state.currentStep}`).classList.remove('hidden');
+
+            for (let i = 1; i <= 6; i++) {
+                const navEl = document.getElementById(`step-nav-${i}`);
+                if (i === state.currentStep) {
+                    navEl.className = "flex-1 min-w-[70px] text-center py-1 rounded text-[10px] font-mono font-bold bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-955 border border-zinc-700/50 shadow-sm";
+                } else if (i < state.currentStep) {
+                    navEl.className = "flex-1 min-w-[70px] text-center py-1 rounded text-[10px] font-mono text-emerald-600 dark:text-emerald-400 border border-transparent";
+                } else {
+                    navEl.className = "flex-1 min-w-[70px] text-center py-1 rounded text-[10px] font-mono text-zinc-400 dark:text-zinc-500 border border-transparent";
+                }
+            }
+
+            document.getElementById('prev-step-btn').disabled = (state.currentStep === 1);
+            const nextBtn = document.getElementById('next-step-btn');
+            const nextBtnLabel = document.getElementById('next-btn-label');
+            
+            if (state.currentStep === 6) {
+                nextBtnLabel.textContent = i18n[state.lang].btnFinish;
+                nextBtn.disabled = true;
+            } else {
+                nextBtnLabel.textContent = i18n[state.lang].btnNext;
+                nextBtn.disabled = false;
+            }
+
+            document.getElementById('step-indicator').textContent = i18n[state.lang].indicatorStep.replace('{step}', state.currentStep);
+            updateGoalHeader();
+
+            if (state.currentStep === 6) {
+                generateMarkdown();
+                generateChatOptimized();
+            }
+
+            syncImportedToActiveTasks();
+            renderAll();
+            lucide.createIcons();
+        }
+
+        function toggleTimer() {
+            const btnIcon = document.getElementById('timer-btn-icon');
+            const btnText = document.getElementById('timer-btn-text');
+            const toggleBtn = document.getElementById('timer-toggle-btn');
+            const statusPulse = document.getElementById('status-pulse');
+
+            if (state.timerRunning) {
+                clearInterval(timerInterval);
+                state.timerRunning = false;
+                btnIcon.setAttribute('data-lucide', 'play');
+                btnText.textContent = i18n[state.lang].timerStart;
+                toggleBtn.className = "p-1.5 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded text-[10px] font-mono font-semibold transition-colors flex items-center gap-1";
+                statusPulse.className = "h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-600 transition-colors duration-500";
+            } else {
+                state.timerRunning = true;
+                btnIcon.setAttribute('data-lucide', 'pause');
+                btnText.textContent = i18n[state.lang].timerPause;
+                toggleBtn.className = "p-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-[10px] font-mono font-semibold transition-colors flex items-center gap-1";
+                statusPulse.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse transition-colors duration-500";
+                
+                timerInterval = setInterval(() => {
+                    state.elapsedSeconds++;
+                    updateTimerDisplay();
+                    saveState();
+                }, 1000);
+            }
+            lucide.createIcons();
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            state.timerRunning = false;
+            state.elapsedSeconds = 0;
+            
+            const btnIcon = document.getElementById('timer-btn-icon');
+            const btnText = document.getElementById('timer-btn-text');
+            const toggleBtn = document.getElementById('timer-toggle-btn');
+            const statusPulse = document.getElementById('status-pulse');
+            
+            btnIcon.setAttribute('data-lucide', 'play');
+            btnText.textContent = i18n[state.lang].timerStart;
+            toggleBtn.className = "p-1.5 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-200 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded text-[10px] font-mono font-semibold transition-colors flex items-center gap-1";
+            statusPulse.className = "h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-600 transition-colors duration-500";
+            
+            updateTimerDisplay();
+            saveState();
+            lucide.createIcons();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(state.elapsedSeconds / 60);
+            const seconds = state.elapsedSeconds % 60;
+            const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            document.getElementById('timer-text').textContent = timeStr;
+
+            const totalTargetSeconds = state.targetDuration * 60;
+            const progressPct = Math.min((state.elapsedSeconds / totalTargetSeconds) * 100, 100);
+            const progressBar = document.getElementById('timer-progress');
+            progressBar.style.width = `${progressPct}%`;
+
+            if (progressPct >= 100) {
+                progressBar.classList.remove('bg-zinc-400', 'dark:bg-zinc-500');
+                progressBar.classList.add('bg-red-500');
+            } else {
+                progressBar.classList.remove('bg-red-500');
+                progressBar.classList.add('bg-zinc-400', 'dark:bg-zinc-500');
+            }
+
+            const hoursBurned = ((state.elapsedSeconds / 3600) * state.attendeesCount).toFixed(2);
+            document.getElementById('burn-text').textContent = `${hoursBurned}${i18n[state.lang].burnSuffix}`;
+        }
+
+        function parseTaskLine(line) {
+            line = line.trim();
+            if (!line || line.startsWith('|---') || line.toLowerCase().includes('felelős') || line.toLowerCase().includes('assignee')) return null;
+
+            let who = state.lang === 'hu' ? "Ismeretlen" : "Unknown";
+            let what = line;
+            let when = state.lang === 'hu' ? "Nincs megadva" : "Not specified";
+
+            if (line.includes('|')) {
+                const cells = line.split('|').map(c => c.trim()).filter(c => c !== '');
+                if (cells.length >= 2) {
+                    who = cells[0].replace(/\*\*|\*/g, '').trim();
+                    what = cells[1].trim();
+                    const rawWhen = cells[2] ? cells[2].replace(/\*\*|\*/g, '').trim() : '';
+                    when = extractFlexibleDate(rawWhen) || rawWhen || (state.lang === 'hu' ? "Azonnal" : "Immediately");
+                    return { id: Date.now() + Math.random(), who, what, when, completed: false };
+                }
+            }
+
+            const yearMonthDayRegex = /\b((?:20|19)?\d{2}\.\d{1,2}\.\d{1,2}\.?)\b/;
+            const monthDayRegex = /\b(\d{1,2}\.\d{1,2}\.?)\b/;
+
+            let dateMatch = line.match(yearMonthDayRegex);
+            if (!dateMatch) {
+                dateMatch = line.match(monthDayRegex);
+            }
+
+            if (dateMatch) {
+                when = dateMatch[1];
+                const dateCleanRegex = new RegExp(`\\s*\\(?\\s*(?:határidő|deadline|h|H)?:?\\s*${escapeRegex(dateMatch[0])}\\s*\\)?|\\s*\\[\\s*(?:határidő|deadline|h|H)?:?\\s*${escapeRegex(dateMatch[0])}\\s*\\]`, 'i');
+                what = line.replace(dateCleanRegex, '').trim();
+            }
+
+            const splitRegex = /[:\-–]/;
+            const parts = what.split(splitRegex);
+            if (parts.length > 1) {
+                const possibleWho = parts[0].trim();
+                if (possibleWho.length < 30) {
+                    who = possibleWho;
+                    what = parts.slice(1).join(':').trim();
+                }
+            }
+
+            what = what.replace(/\s+/g, ' ').replace(/^[,.;\s]+|[,.;\s]+$/g, '');
+            who = who.replace(/\s+/g, ' ').trim();
+
+            return {
+                id: Date.now() + Math.random(),
+                who: who,
+                what: what,
+                when: when,
+                completed: false
+            };
+        }
+
+        function extractFlexibleDate(str) {
+            if (!str) return null;
+            const match = str.match(/\b((?:\d{4}\.)?\d{1,2}\.\d{1,2}\.?)\b/);
+            return match ? match[1] : null;
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        }
+
+        function importPreviousActionPlan() {
+            const rawText = document.getElementById('import-notes-area').value.trim();
+            if (!rawText) {
+                showToast(i18n[state.lang].toastEmptyImport);
+                return;
+            }
+
+            const lines = rawText.split('\n');
+            let importedCount = 0;
+
+            lines.forEach(line => {
+                const parsed = parseTaskLine(line);
+                if (parsed) {
+                    state.importedTasks.push(parsed);
+                    importedCount++;
+                }
+            });
+
+            if (importedCount > 0) {
+                saveState();
+                syncImportedToActiveTasks();
+                renderAll();
+                document.getElementById('import-notes-area').value = "";
+                showToast(i18n[state.lang].toastImportSuccess.replace('{count}', importedCount));
+                
+                state.currentStep = 2;
+                updateStepView();
+            } else {
+                showToast(i18n[state.lang].toastImportFail);
+            }
+        }
+
+        function syncImportedToActiveTasks() {
+            state.tasks = state.tasks.filter(t => !t.fromImport);
+
+            state.importedTasks.forEach(it => {
+                if (!it.completed) {
+                    state.tasks.push({
+                        id: 'imported-' + it.id,
+                        what: it.what,
+                        who: it.who,
+                        when: it.when,
+                        fromImport: true,
+                        originalId: it.id
+                    });
+                }
+            });
+            saveState();
+        }
+
+        function toggleImportedTaskStatus(id) {
+            const task = state.importedTasks.find(it => it.id == id);
+            if (task) {
+                task.completed = !task.completed;
+                saveState();
+                syncImportedToActiveTasks();
+                renderAll();
+            }
+        }
+
+        function spinDevilAdvocate() {
+            const namesStr = document.getElementById('input-names').value.trim();
+            if (!namesStr) {
+                showToast(i18n[state.lang].noAttendeesAlert);
+                return;
+            }
+
+            const names = namesStr.split(',').map(n => n.trim()).filter(n => n.length > 0);
+            if (names.length === 0) {
+                showToast(i18n[state.lang].noAttendeesAlert);
+                return;
+            }
+
+            const randomName = names[Math.floor(Math.random() * names.length)];
+            const resultBox = document.getElementById('chooser-result');
+            const resultName = document.getElementById('chooser-result-name');
+            const resultQuestion = document.getElementById('chooser-result-question');
+
+            resultName.textContent = `${i18n[state.lang].targetLabel} ${randomName}`;
+
+            const checkPair = document.getElementById('chooser-pair-question');
+            if (checkPair.checked) {
+                const questions = devPrompts[state.lang];
+                const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+                resultQuestion.textContent = randomQuestion;
+                resultQuestion.classList.remove('hidden');
+            } else {
+                resultQuestion.classList.add('hidden');
+            }
+
+            resultBox.classList.remove('hidden');
+        }
+
+        function loadAgendaTemplate() {
+            const selectedTmpl = document.getElementById('agenda-template-select').value;
+            const dictionary = i18n[state.lang];
+            let items = [];
+
+            if (selectedTmpl === 'tactical') {
+                items = [
+                    dictionary.tmplWeeklyRound,
+                    dictionary.tmplWeeklyMetrics,
+                    dictionary.tmplWeeklyBottlenecks
+                ];
+            } else if (selectedTmpl === 'brainstorm') {
+                items = [
+                    dictionary.tmplBrainstormGoals,
+                    dictionary.tmplBrainstormIdeation,
+                    dictionary.tmplBrainstormPitch
+                ];
+            } else if (selectedTmpl === 'retro') {
+                items = [
+                    dictionary.tmplRetroGood,
+                    dictionary.tmplRetroImprove,
+                    dictionary.tmplRetroActions
+                ];
+            } else if (selectedTmpl === 'kickoff') {
+                items = [
+                    dictionary.tmplKickoffScope,
+                    dictionary.tmplKickoffRoles,
+                    dictionary.tmplKickoffTimeline
+                ];
+            }
+
+            items.forEach(text => {
+                state.ideas.push({
+                    id: Date.now() + Math.random(),
+                    name: text
+                });
+            });
+
+            saveState();
+            renderBrainstormList();
+            showToast(dictionary.toastDemo);
+        }
+
+        function renderAll() {
+            renderImportedAuditList();
+            renderBrainstormList();
+            renderTasksList();
+            renderParkingList();
+        }
+
+        function renderImportedAuditList() {
+            const tbody = document.getElementById('imported-audit-list');
+            if (state.importedTasks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-zinc-400 italic">${i18n[state.lang].tblEmptyPast}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.importedTasks.map(task => `
+                <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors">
+                    <td class="px-4 py-3 text-center">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                            onchange="toggleImportedTaskStatus('${task.id}')"
+                            class="rounded border-zinc-300 dark:border-zinc-700 text-emerald-600 focus:ring-0 cursor-pointer w-4 h-4">
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-zinc-700 dark:text-zinc-200 ${task.completed ? 'line-through text-zinc-400 dark:text-zinc-500' : ''}">${escapeHtml(task.what)}</div>
+                        <div class="text-[10px] font-mono text-cyan-600 dark:text-cyan-400">${escapeHtml(task.who)}</div>
+                    </td>
+                    <td class="px-4 py-3 text-center font-mono text-zinc-600 dark:text-zinc-400">
+                        ${escapeHtml(task.when)}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        ${task.completed ? 
+                            `<span class="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 rounded text-[9px] font-mono font-bold">${i18n[state.lang].badgeDone}</span>` : 
+                            `<span class="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 rounded text-[9px] font-mono font-bold whitespace-nowrap">${i18n[state.lang].badgeToToday}</span>`}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addBrainstormIdea() {
+            const input = document.getElementById('brainstorm-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            state.ideas.push({
+                id: Date.now(),
+                name: text
+            });
+
+            input.value = '';
+            saveState();
+            renderBrainstormList();
+        }
+
+        function deleteIdea(id) {
+            state.ideas = state.ideas.filter(i => i.id != id);
+            saveState();
+            renderBrainstormList();
+        }
+
+        function renderBrainstormList() {
+            const tbody = document.getElementById('brainstorm-list');
+            if (state.ideas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="py-4 text-center text-zinc-400 italic">${i18n[state.lang].tblEmptyIdeas}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.ideas.map(idea => `
+                <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors">
+                    <td class="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">${escapeHtml(idea.name)}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="deleteIdea('${idea.id}')" class="text-zinc-400 hover:text-red-500 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addTask() {
+            const whatEl = document.getElementById('task-what');
+            const whoEl = document.getElementById('task-who');
+            const whenEl = document.getElementById('task-when');
+
+            const what = whatEl.value.trim();
+            const who = whoEl.value.trim();
+            const when = whenEl.value.trim();
+
+            if (!what) return;
+
+            state.tasks.push({
+                id: Date.now(),
+                what: what,
+                who: who || (state.lang === 'hu' ? "Nincs kijelölve" : "Not assigned"),
+                when: when || (state.lang === 'hu' ? "Azonnal" : "Immediately")
+            });
+
+            whatEl.value = '';
+            whoEl.value = '';
+            whenEl.value = '';
+
+            saveState();
+            renderTasksList();
+        }
+
+        function deleteTask(id) {
+            const task = state.tasks.find(t => t.id == id);
+            if (task && task.fromImport) {
+                const importedTask = state.importedTasks.find(it => it.id == task.originalId);
+                if (importedTask) {
+                    importedTask.completed = true; 
+                }
+            }
+
+            state.tasks = state.tasks.filter(t => t.id != id);
+            saveState();
+            renderTasksList();
+            renderImportedAuditList();
+        }
+
+        function renderTasksList() {
+            const container = document.getElementById('tasks-container');
+            if (state.tasks.length === 0) {
+                container.innerHTML = `<span class="text-xs text-zinc-400 italic block py-2">${i18n[state.lang].tasksEmpty}</span>`;
+                return;
+            }
+
+            container.innerHTML = state.tasks.map(t => `
+                <div class="flex justify-between items-start gap-2 bg-zinc-50 dark:bg-zinc-900/60 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs shadow-sm">
+                    <div class="space-y-1">
+                        <div class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(t.what)}</div>
+                        <div class="flex items-center gap-2 text-[10px] font-mono text-zinc-400">
+                            <span class="text-cyan-600 dark:text-cyan-400 font-bold">${escapeHtml(t.who)}</span>
+                            <span>•</span>
+                            <span>${state.lang === 'hu' ? 'Határidő' : 'Deadline'}: ${escapeHtml(t.when)}</span>
+                            ${t.fromImport ? `<span class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 rounded text-[8px] font-bold font-sans">${state.lang === 'hu' ? 'ÁTHOZOTT' : 'CARRIED OVER'}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="deleteTask('${t.id}')" class="text-zinc-400 hover:text-red-500 transition-colors shrink-0">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addParkingItem() {
+            const input = document.getElementById('parking-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            state.parking.push(text);
+            input.value = '';
+            saveState();
+            renderParkingList();
+        }
+
+        function deleteParkingItem(index) {
+            state.parking.splice(index, 1);
+            saveState();
+            renderParkingList();
+        }
+
+        function renderParkingList() {
+            const container = document.getElementById('parking-container');
+            if (state.parking.length === 0) {
+                container.innerHTML = `<span class="text-xs text-zinc-400 italic block py-2">${i18n[state.lang].parkingEmpty}</span>`;
+                return;
+            }
+
+            container.innerHTML = state.parking.map((item, index) => `
+                <div class="flex justify-between items-center bg-amber-500/5 border border-amber-500/10 p-2 rounded-lg text-xs">
+                    <span class="text-zinc-600 dark:text-amber-400/90 italic truncate pr-2">🅿 ${escapeHtml(item)}</span>
+                    <button onclick="deleteParkingItem(${index})" class="text-zinc-400 hover:text-red-500 transition-colors shrink-0">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function switchExportTab(tab) {
+            activeExportTab = tab;
+            const btnMd = document.getElementById('tab-btn-markdown');
+            const btnChat = document.getElementById('tab-btn-chat');
+            const boxMd = document.getElementById('markdown-output');
+            const boxChat = document.getElementById('chat-output');
+            const copyBtnLabel = document.getElementById('copy-btn-label');
+
+            if (tab === 'markdown') {
+                btnMd.className = "px-2.5 py-1 text-xs font-mono font-bold rounded bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900";
+                btnChat.className = "px-2.5 py-1 text-xs font-mono text-zinc-500 dark:text-zinc-400";
+                boxMd.classList.remove('hidden');
+                boxChat.classList.add('hidden');
+                copyBtnLabel.textContent = i18n[state.lang].btnCopy;
+            } else {
+                btnChat.className = "px-2.5 py-1 text-xs font-mono font-bold rounded bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900";
+                btnMd.className = "px-2.5 py-1 text-xs font-mono text-zinc-500 dark:text-zinc-400";
+                boxChat.classList.remove('hidden');
+                boxMd.classList.add('hidden');
+                copyBtnLabel.textContent = i18n[state.lang].btnCopyChat;
+            }
+        }
+
+        function compilePreMeetingSummary(format) {
+            const dictionary = i18n[state.lang];
+            const agendaStr = state.ideas.map((id, index) => `${index + 1}. ${id.name}`).join('\n') || (state.lang === 'hu' ? "(Nincsenek napirendi pontok)" : "(No agenda items)");
+            const linkStr = state.preMeetingLinks ? state.preMeetingLinks.split('\n').map(link => `* ${link.trim()}`).join('\n') : (state.lang === 'hu' ? "(Nincsenek hivatkozott linkek)" : "(No reference links)");
+            const contextStr = state.preMeetingText || (state.lang === 'hu' ? "(Nincs megadva háttér-információ)" : "(No context text provided)");
+
+            if (format === 'md') {
+                return `# 📋 ${state.lang === 'hu' ? 'MEGBESZÉLÉS ELŐTTI AGENDA & FELKÉSZÜLÉSI ANYAG' : 'BEFORE-MEETING AGENDA & PRE-READ'}: ${state.title || "---"}
+**${dictionary.goalLabel}** ${state.goal || "---"}
+**${state.lang === 'hu' ? 'Tervezett Időtartam' : 'Target Duration'}:** ${state.targetDuration} mins
+
+## 📌 ${dictionary.mdAgendaTitle}
+${agendaStr}
+
+## 🔗 ${state.lang === 'hu' ? 'Hivatkozott Weblinkek' : 'Reference Weblinks'}
+${linkStr}
+
+## 📑 ${state.lang === 'hu' ? 'Háttér & Kontextus' : 'Background & Context'}
+${contextStr}
+
+---
+*${state.lang === 'hu' ? 'Kérjük, nézd át a fenti pontokat a megbeszélés előtt! Generálva a Meeting Pilot-tal.' : 'Please review these items and links before joining! Generated with Meeting Pilot.'}*`;
+            } else if (format === 'chat') {
+                return `🚀 *${state.lang === 'hu' ? 'MEGBESZÉLÉS ELŐTTI AGENDA & PRE-READ' : 'BEFORE-MEETING AGENDA & PRE-READ'}: ${state.title.toUpperCase() || "---"}*
+🎯 *Goal:* ${state.goal || "---"}
+⏱️ *Duration:* ${state.targetDuration}m
+
+*Agenda Items:*
+${state.ideas.map(id => `• ${id.name}`).join('\n') || "• None"}
+
+*Reference Links:*
+${state.preMeetingLinks ? state.preMeetingLinks.split('\n').map(l => `• ${l}`).join('\n') : "• None"}
+
+*Background context:*
+${state.preMeetingText || "• None"}
+
+_${state.lang === 'hu' ? 'Készülj fel a fenti pontok alapján!' : 'Review before joining! Generated with Meeting Pilot.'}_`;
+            } else {
+                // Plain text fallback
+                return `📋 ${state.lang === 'hu' ? 'MEGBESZÉLÉS ELŐTTI JELENTÉS' : 'BEFORE-MEETING REPORT'}: ${state.title || "---"}
+==================================================
+Goal: ${state.goal || "---"}
+Duration: ${state.targetDuration} mins
+
+AGENDA ITEMS:
+${state.ideas.map((id, idx) => `${idx + 1}. ${id.name}`).join('\n') || "None"}
+
+REFERENCE WEBLINKS:
+${state.preMeetingLinks || "None"}
+
+BACKGROUND CONTEXT:
+${state.preMeetingText || "None"}`;
+            }
+        }
+
+        function copyPreMeetingSummary(format) {
+            const text = compilePreMeetingSummary(format);
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            try {
+                document.execCommand('copy');
+                if (format === 'md') {
+                    showToast(i18n[state.lang].toastPreMeetingCopied);
+                } else {
+                    showToast(i18n[state.lang].toastPreMeetingChatCopied);
+                }
+            } catch (err) {
+                showToast(i18n[state.lang].toastCopyError);
+            }
+            document.body.removeChild(temp);
+        }
+
+        function triggerPreMeetingDownload(format) {
+            let content = "";
+            let filename = "pre-meeting-agenda";
+            let mime = "text/plain";
+
+            if (format === 'md') {
+                content = compilePreMeetingSummary('md');
+                filename += ".md";
+                mime = "text/markdown";
+            } else {
+                content = compilePreMeetingSummary('txt');
+                filename += ".txt";
+            }
+
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:' + mime + ';charset=utf-8,' + encodeURIComponent(content));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+
+            showToast(i18n[state.lang].toastDownloadSuccess.replace('{file}', filename));
+        }
+
+        function generateMarkdown() {
+            const minutes = Math.floor(state.elapsedSeconds / 60);
+            const seconds = state.elapsedSeconds % 60;
+            const burnHours = ((state.elapsedSeconds / 3600) * state.attendeesCount).toFixed(2);
+            const dictionary = i18n[state.lang];
+
+            let md = `# 📝 ${dictionary.mdTitle}: ${state.title || "---"}\n`;
+            md += `**${dictionary.mdDuration}:** ${minutes} min ${seconds} s (${dictionary.mdPlanned}: ${state.targetDuration} min)\n`;
+            md += `**${dictionary.mdBurned}:** ${burnHours} workspace hours | **${state.lang === 'hu' ? 'Résztvevők száma' : 'Number of attendees'}:** ${state.attendeesCount}\n`;
+            
+            if (state.attendeesNames) {
+                md += `**${dictionary.mdAttendees}:** ${state.attendeesNames}\n`;
+            }
+            if (state.goal) {
+                md += `**${dictionary.mdGoal}:** *${state.goal}*\n`;
+            }
+            
+            md += `\n---\n\n`;
+
+            // Agenda Items
+            md += `## 📌 ${dictionary.mdAgendaTitle}\n`;
+            if (state.ideas.length > 0) {
+                state.ideas.forEach((id, idx) => {
+                    md += `${idx + 1}. ${id.name}\n`;
+                });
+            } else {
+                md += `*${state.lang === 'hu' ? 'Nem lettek napirendi pontok felvéve.' : 'No agenda items were added.'}*\n`;
+            }
+            md += `\n`;
+
+            // Weblinks & Pre-meeting reference context
+            if (state.preMeetingLinks || state.preMeetingText) {
+                md += `## 🔗 ${state.lang === 'hu' ? 'Hivatkozások & Kontextus' : 'Links & Context'}\n`;
+                if (state.preMeetingLinks) {
+                    md += `### ${state.lang === 'hu' ? 'Hivatkozott linkek' : 'Reference links'}\n`;
+                    state.preMeetingLinks.split('\n').forEach(l => {
+                        md += `* ${l.trim()}\n`;
+                    });
+                }
+                if (state.preMeetingText) {
+                    md += `### ${state.lang === 'hu' ? 'Megbeszélés előtti háttér' : 'Pre-meeting background'}\n`;
+                    md += `${state.preMeetingText}\n\n`;
+                }
+            }
+
+            // Tasks
+            md += `## 🏃‍♂️ ${dictionary.mdTasks}\n`;
+            if (state.tasks.length > 0) {
+                md += `| ${state.lang === 'hu' ? 'Felelős (Who)' : 'Assignee (Who)'} | ${state.lang === 'hu' ? 'Feladat (What)' : 'Task (What)'} | ${state.lang === 'hu' ? 'Határidő (When)' : 'Deadline (When)'} |\n`;
+                md += `| :--- | :--- | :--- |\n`;
+                state.tasks.forEach(t => {
+                    md += `| **${t.who}** | ${t.what} | *${t.when}* |\n`;
+                });
+            } else {
+                md += `*${state.lang === 'hu' ? 'Nincsenek kiosztott feladatok.' : 'No tasks assigned.'}*\n`;
+            }
+            md += `\n`;
+
+            // Parking Lot
+            md += `## 🚗 ${dictionary.mdParking}\n`;
+            if (state.parking.length > 0) {
+                state.parking.forEach(p => {
+                    md += `* ${p}\n`;
+                });
+            } else {
+                md += `*${dictionary.mdNoParking}*\n`;
+            }
+            md += `\n`;
+
+            // Lencioni
+            md += `## 🛡️ ${dictionary.mdAudit}\n`;
+            md += `* **${state.lang === 'hu' ? 'Konfliktus' : 'Conflict'}:** ${state.auditConflict ? `✅ ${dictionary.mdAuditConflictSuccess}` : `❌ ${dictionary.mdAuditConflictFail}`}\n`;
+            md += `* **${state.lang === 'hu' ? 'Világosság' : 'Clarity'}:** ${state.auditClarity ? `✅ ${dictionary.mdAuditClaritySuccess}` : `❌ ${dictionary.mdAuditClarityFail}`}\n`;
+            md += `* **${state.lang === 'hu' ? 'Elköteleződés' : 'Commitment'}:** ${state.auditCommitment ? `✅ ${dictionary.mdAuditCommitmentSuccess}` : `❌ ${dictionary.mdAuditCommitmentFail}`}\n`;
+            md += `* **${state.lang === 'hu' ? 'Feladatok Hangos Ellenőrzése' : 'Tasks Verbal Check'}:** ${state.tasksConfirmed ? `✅ ${dictionary.mdAuditClaritySuccess}` : `❌ ${dictionary.mdAuditClarityFail}`}\n`;
+            md += `\n`;
+
+            if (state.rawNotes.trim()) {
+                md += `## 📑 ${dictionary.mdRawNotesTitle}\n`;
+                md += `${state.rawNotes}\n\n`;
+            }
+
+            md += `---\n*${dictionary.mdFooter}*`;
+
+            document.getElementById('markdown-output').value = md;
+            return md;
+        }
+
+        function generateChatOptimized() {
+            const minutes = Math.floor(state.elapsedSeconds / 60);
+            const seconds = state.elapsedSeconds % 60;
+            const burnHours = ((state.elapsedSeconds / 3600) * state.attendeesCount).toFixed(2);
+            const dictionary = i18n[state.lang];
+
+            let chat = `🚀 *${dictionary.mdTitle}: ${state.title.toUpperCase() || "---"}*
+⏱️ *${minutes}m ${seconds}s* | 👥 *${state.attendeesCount}* participants | 💼 *${burnHours}* resource hours
+🎯 *Goal:* ${state.goal || "---"}
+
+*Agenda Items:*
+${state.ideas.map((id, idx) => `• ${id.name}`).join('\n') || "• None"}
+
+*Assigned Tasks:*
+${state.tasks.map(t => `• *[${t.who}]* ${t.what} (Due: ${t.when})`).join('\n') || "• None"}
+
+*Parking Lot:*
+${state.parking.map(p => `• 🅿 ${p}`).join('\n') || "• None"}
+
+*Tactical Review Audit:* ${state.auditConflict && state.auditClarity && state.auditCommitment && state.tasksConfirmed ? "✅ All aligned & committed!" : "⚠️ Alignment was not fully verified."}
+
+_${dictionary.mdFooter}_`;
+
+            document.getElementById('chat-output').value = chat;
+            return chat;
+        }
+
+        function generatePlainText() {
+            const minutes = Math.floor(state.elapsedSeconds / 60);
+            const seconds = state.elapsedSeconds % 60;
+            const burnHours = ((state.elapsedSeconds / 3600) * state.attendeesCount).toFixed(2);
+            const dictionary = i18n[state.lang];
+
+            let txt = `📝 ${dictionary.mdTitle}: ${state.title.toUpperCase() || "---"}\n`;
+            txt += `========================================\n`;
+            txt += `${dictionary.mdDuration}: ${minutes} min ${seconds} s (${dictionary.mdPlanned}: ${state.targetDuration} min)\n`;
+            txt += `${state.lang === 'hu' ? 'Becsült erőforrás' : 'Estimated resource'}: ${burnHours} hours | ${state.lang === 'hu' ? 'Résztvevők száma' : 'Number of attendees'}: ${state.attendeesCount}\n`;
+            if (state.attendeesNames) {
+                txt += `${dictionary.mdAttendees}: ${state.attendeesNames}\n`;
+            }
+            if (state.goal) {
+                txt += `${state.lang === 'hu' ? 'Fő kérdés' : 'Main question'}: ${state.goal}\n`;
+            }
+            txt += `========================================\n\n`;
+
+            txt += `${dictionary.mdAgendaTitle.toUpperCase()}\n`;
+            txt += `----------------------------------------\n`;
+            if (state.ideas.length > 0) {
+                state.ideas.forEach((id, idx) => {
+                    txt += `${idx + 1}. ${id.name}\n`;
+                });
+            } else {
+                txt += `None\n`;
+            }
+            txt += `\n`;
+
+            txt += `${state.lang === 'hu' ? 'FELADATOK' : 'TASKS'}\n`;
+            txt += `----------------------------------------\n`;
+            if (state.tasks.length > 0) {
+                state.tasks.forEach(t => {
+                    txt += `- [${t.who}] ${t.what} (${state.lang === 'hu' ? 'Határidő' : 'Deadline'}: ${t.when})\n`;
+                });
+            } else {
+                txt += `None\n`;
+            }
+            txt += `\n`;
+
+            txt += `${state.lang === 'hu' ? 'PARKOLÓPÁLYÁRA TETT TÉMÁK' : 'PARKED TOPICS (PARKING LOT)'}\n`;
+            txt += `----------------------------------------\n`;
+            if (state.parking.length > 0) {
+                state.parking.forEach(p => {
+                    txt += `- ${p}\n`;
+                });
+            } else {
+                txt += `${dictionary.mdNoParking}\n`;
+            }
+            txt += `\n`;
+
+            txt += `TACTICAL AUDIT (LENCIONI)\n`;
+            txt += `----------------------------------------\n`;
+            txt += `- ${state.lang === 'hu' ? 'Konfliktus' : 'Conflict'}: ${state.auditConflict ? dictionary.mdAuditConflictSuccess : dictionary.mdAuditConflictFail}\n`;
+            txt += `- ${state.lang === 'hu' ? 'Világosság' : 'Clarity'}: ${state.auditClarity ? dictionary.mdAuditClaritySuccess : dictionary.mdAuditClarityFail}\n`;
+            txt += `- ${state.lang === 'hu' ? 'Elköteleződés' : 'Commitment'}: ${state.auditCommitment ? dictionary.mdAuditCommitmentSuccess : dictionary.mdAuditCommitmentFail}\n`;
+            txt += `- ${state.lang === 'hu' ? 'Feladatok megerősítése' : 'Verbal task verification'}: ${state.tasksConfirmed ? "Verbal loop complete" : "Loop incomplete"}\n`;
+            txt += `\n`;
+
+            if (state.rawNotes.trim()) {
+                txt += `${state.lang === 'hu' ? 'TOVÁBBI JEGYZETEK' : 'ADDITIONAL NOTES'}\n`;
+                txt += `----------------------------------------\n`;
+                txt += state.rawNotes + `\n\n`;
+            }
+
+            txt += `========================================\n`;
+            txt += dictionary.mdFooter;
+            return txt;
+        }
+
+        function triggerFileDownload(format) {
+            let content = "";
+            let filename = "meeting-pilot-report";
+            let mime = "text/plain";
+
+            if (format === 'md') {
+                content = generateMarkdown();
+                filename += ".md";
+                mime = "text/markdown";
+            } else {
+                content = generatePlainText();
+                filename += ".txt";
+            }
+
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:' + mime + ';charset=utf-8,' + encodeURIComponent(content));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+
+            showToast(i18n[state.lang].toastDownloadSuccess.replace('{file}', filename));
+        }
+
+        function copySelectedOutputToClipboard() {
+            const activeBox = (activeExportTab === 'markdown') ? document.getElementById('markdown-output') : document.getElementById('chat-output');
+            activeBox.select();
+            activeBox.setSelectionRange(0, 99999);
+
+            try {
+                document.execCommand('copy');
+                if (activeExportTab === 'markdown') {
+                    showToast(i18n[state.lang].toastCopied);
+                } else {
+                    showToast(i18n[state.lang].toastChatCopied);
+                }
+            } catch (err) {
+                showToast(i18n[state.lang].toastCopyError);
+            }
+        }
+
+        function shareViaEmail() {
+            const subject = encodeURIComponent(`${i18n[state.lang].mdTitle}: ${state.title}`);
+            const body = encodeURIComponent(generateMarkdown());
+            window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+            showToast(i18n[state.lang].toastEmailClient);
+        }
+
+        function showToast(msg) {
+            const toastEl = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            
+            toastEl.classList.remove('opacity-0', 'translate-y-20');
+            toastEl.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toastEl.classList.remove('opacity-100', 'translate-y-0');
+                toastEl.classList.add('opacity-0', 'translate-y-20');
+            }, 3500);
+        }
+
+        function resetWholeApp() {
+            localStorage.removeItem('meeting_pilot_wizard_state_v5');
+            const savedLang = state.lang; 
+
+            state = {
+                currentStep: 1,
+                title: savedLang === 'en' ? "Weekly Tactical Sync" : "Heti Taktikai Szinkron",
+                attendeesCount: 5,
+                attendeesNames: "",
+                goal: "",
+                targetDuration: 30,
+                elapsedSeconds: 0,
+                timerRunning: false,
+                ideas: [],
+                importedTasks: [],
+                tasks: [],
+                tasksConfirmed: false,
+                parking: [],
+                preMeetingText: "",
+                preMeetingLinks: "",
+                auditConflict: false,
+                auditClarity: false,
+                auditCommitment: false,
+                rawNotes: "",
+                lang: savedLang
+            };
+
+            syncInputsFromState();
+            resetTimer();
+            updateStepView();
+            renderAll();
+            showToast(i18n[state.lang].toastReset);
+        }
+
+        function loadDemoDataToApp() {
+            const currentLang = state.lang;
+            const demoSource = demoData[currentLang];
+
+            state = {
+                currentStep: 1,
+                title: demoSource.title,
+                attendeesCount: demoSource.attendeesCount,
+                attendeesNames: demoSource.attendeesNames,
+                goal: demoSource.goal,
+                targetDuration: demoSource.targetDuration,
+                elapsedSeconds: 120,
+                timerRunning: false,
+                ideas: JSON.parse(JSON.stringify(demoSource.ideas)),
+                importedTasks: JSON.parse(JSON.stringify(demoSource.importedTasks)),
+                tasks: JSON.parse(JSON.stringify(demoSource.tasks)),
+                tasksConfirmed: demoSource.tasksConfirmed,
+                parking: JSON.parse(JSON.stringify(demoSource.parking)),
+                preMeetingText: demoSource.preMeetingText,
+                preMeetingLinks: demoSource.preMeetingLinks,
+                auditConflict: true,
+                auditClarity: true,
+                auditCommitment: false,
+                rawNotes: demoSource.rawNotes,
+                lang: currentLang
+            };
+
+            syncInputsFromState();
+            resetTimer();
+            updateStepView();
+            renderAll();
+            showToast(i18n[state.lang].toastDemo);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
